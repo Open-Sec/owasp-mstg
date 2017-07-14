@@ -46,7 +46,7 @@ All this doesn't mean however that we should let developers get away with writin
 
 ### Anti-Tampering and Anti-Reversing
 
-There are three things you should never bring up in date conversations: Religion, politics and code obfuscation. Many security experts dismiss client-side protections outright. However, the fast is that software protection controls are widely used in the mobile app world, so security testers need ways to deal with them. We also think that there is *some* benefit to be had, as long as the protections are employed with a clear purpose and realistic expectations in mind, and aren't used to *replace* security controls.
+There are three things you should never bring up in date conversations: Religion, politics and code obfuscation. Many security experts dismiss client-side protections outright. However, the fact is that software protection controls are widely used in the mobile app world, so security testers need ways to deal with them. We also think that there is *some* benefit to be had, as long as the protections are employed with a clear purpose and realistic expectations in mind, and aren't used to *replace* security controls.
 
 ## The OWASP Mobile AppSec Verification Standard, Checklist and Testing Guide
 
@@ -68,7 +68,7 @@ The guide is organized as follows:
 
 - In the general testing guide (the following few chapters), we present the mobile app security testing methodology, and talk about general vulnerability analysis techniques as they apply to mobile application security.
 
-- The Android Testing Guide covers the everything specific to the Android platform, including security basics, security test cases, and reverse engineering and tampering techniques and preventions.
+- The Android Testing Guide covers everything specific to the Android platform, including security basics, security test cases, and reverse engineering and tampering techniques and preventions.
 
 - The iOS Testing Guide Testing Guide covers everything specific to iOS, including an overview of the iOS OS, security testing, reverse engineering and anti-reversing.
 

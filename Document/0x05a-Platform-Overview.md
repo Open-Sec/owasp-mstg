@@ -1,6 +1,6 @@
 # Android Platform Overview
 
-This chapter introduces Android from an architecture point of view. It covers four key areas:
+This section introduces the Android platform from an architectural point of view. Four key areas are discussed:
 
 1. Android security architecture
 2. Android application structure
@@ -11,13 +11,15 @@ Visit the official [Android developer documentation website](https://developer.a
 
 ## Android Security Architecture
 
-Android is a Linux-based open source platform build by Google. Is is found on many commonly used devices including mobile phones and tablets, wearables, and "smart" devices like TVs. Typical Android builds ship with a range of pre-installed ("stock") apps and support installation of third-party apps through the Google Play store and other marketplaces.
+Android is a Linux-based open source platform, initially developed by Google as a mobile operating system (OS) solution. Today, the platform is a foundation for a wide variety of modern technology such as mobile phones and tablets, wearable tech, and other "smart" devices like TVs. Typical Android builds ship with a range of pre-installed ("stock") apps and support installation of third-party apps through the Google Play store and other marketplaces.
 
-The software stack of Android comprises different layers. Each layer defines certain behavior and offers specific services to the layer above.
+The software stack of Android is composed of several different layers. Each layer defines certain behavior and offers specific services. Further, these layers interact with OS portions above, below, and other instances paralleling the respective layer’s position within the system architecture.
 
 ![Android Software Stack](Images/Chapters/0x05a/android_software_stack.png)
 
-On the lowest level, Android uses the Linux Kernel upon which the core operating system is built. The hardware abstraction layer defines a standard interface for hardware vendors. HAL (Hardware Abstraction Layer) implementations are packaged into shared library modules (.so files). These modules will be loaded by the Android system at the appropriate time. The Android Runtime consists of the core libraries and the Dalvik VM (Virtual Machine). Apps are most often implemented in Java and compiled in Java class files. However since Android integrates a Dalvik VM, not JVM, the Java class files are then compiled again into the dex format. The dex files are packed into APK (a ZIP archive containing all resources, including the executable) and then unpacked and executed within the Dalvik VM. In the following image you can see the differences between the normal process of compiling and running a typical project in Java vs the process in Android using Dalvik VM.
+At the lowest level, Android utilizes a variation of the Linux Kernel which serves as the foundation for other elements composing the OS. Just above this level, the Hardware Abstraction Layer (HAL) defines a standard interface for interacting with hardware components built into a device. Several HAL implementations are packaged into shared library modules (generally, .SO files) called on by the Android system when required. This is basis for allowing applications to interact with a device’s internal hardware – for example, it grants a stock phone application the ability to use the microphone and speaker.
+
+The Android Runtime consists of the core libraries and the Dalvik VM (Virtual Machine). Apps are most often implemented in Java and compiled in Java class files. However since Android integrates a Dalvik VM, not JVM, the Java class files are then compiled again into the dex format. The dex files are packed into APK (a ZIP archive containing all resources, including the executable) and then unpacked and executed within the Dalvik VM. In the following image you can see the differences between the normal process of compiling and running a typical project in Java vs the process in Android using Dalvik VM.
 
 ![Java vs Dalvik](Images/Chapters/0x05a/java_vs_dalvik.png)
 
@@ -27,7 +29,7 @@ In Android, apps are executed into their own environment in a Virtual Machine (V
 
 #### Android Users and Groups
 
-Even though the Android operating system is based on the Linux, it does utilize user accounts in the same way other Unix-like systems do. For instance, it does not have a _/etc/passwd_ file containing a list of users in the system. Instead, Android utilizes the multi-user support of the Linux kernel to achieve application sandboxing, by running each application under a separate user (with some exceptions).
+Even though the Android operating system is based on the Linux, it does not utilize user accounts in the same way other Unix-like systems do. For instance, it does not have a _/etc/passwd_ file containing a list of users in the system. Instead, Android utilizes the multi-user support of the Linux kernel to achieve application sandboxing, by running each application under a separate user (with some exceptions).
 
 The file [system/core/include/private/android_filesystem_config.h](http://androidxref.com/7.1.1_r6/xref/system/core/include/private/android_filesystem_config.h) shows the complete list of the predefined users and groups used for system processes. UIDs (userIDs) for other applications are added as they are installed on the system. For more details you can check this [overview of Android application sandbox.](https://pierrchen.blogspot.mk/2016/09/an-walk-through-of-android-uidgid-based.html).
 
@@ -67,7 +69,7 @@ Noteworthy API versions are:
     Android 5.0 Lollipop (API 21) in November 2014 (ART by default and many other new features)
     Android 6.0 Marshmallow (API 23) in October 2015 (many new features and improvements, including granting fine-grained permissions at run time and not all or nothing at installation time)
     Android 7.0 Nougat (API 24-25) in August 2016 (new JIT compiler on ART)
-    Android 8.0 O (API 26) beta (mayor security fixes expected)
+    Android 8.0 O (API 26) beta (major security fixes expected)
 
 Apps can be installed on an Android device from a variety of sources: locally through USB, from Google's official store (Google Play Store) or from alternative stores.
 
@@ -572,7 +574,7 @@ Key pairs can be generated by the user with the keytool command (example for a k
 keytool -genkey -alias myDomain -keyalg RSA -keysize 2048 -validity 7300 -keystore myKeyStore.jks -storepass myStrongPassword
 ```
 
-Safely storing a secret key and making sure it remains secret during its entire lifecycle is of paramount importance, as any other person who would get access to it would be able to publish updates to your apps with content that you would not control (therefore being able to create updates to you apps and add insecure features, access content that is shared using signature-based permissions, e.g. only with apps under your control originally). The trust a user places in an app and its developers is totally based on such certificates, hence its protection and secure management are vital for reputation and Customer retention. This is the reason why secret keys must never be shared with other individuals, and keys are stored in a binary file that can be protected using a password: such files are referred to as 'keystores'; passwords used to protect keystores should be strong and known only by the key creator (-storepass option in the command above, where a strong password shall be provided as an argument).
+Safely storing a secret key and making sure it remains secret during its entire lifecycle is of paramount importance, as any other person who would get access to it would be able to publish updates to your apps with content that you would not control (therefore being able to create updates to you apps and add insecure features, access content that is shared using signature-based permissions, e.g. only with apps under your control originally). The trust a user places in an app and its developers is totally based on such certificates, hence its protection and secure management are vital for reputation and Customer retention. This is the reason why secret keys must never be shared with other individuals, and keys are stored in a binary file that can be protected using a password: such files are referred to as 'keystores'; passwords used to protect keystores should be strong and known only by the key creator (-storepass option in the command above, where a strong password shall be provided as an argument). For this reason keys are usually stored on a dedicated build machine with limited access for developers.
 
 Android certificates must have a validity period longer than the one of the associated app (including its updates). For example, Google Play will require that the certificate remains valid till at least Oct 22nd, 2033.
 
@@ -594,8 +596,8 @@ The <code>zipalign</code> tool should always be used to align an APK file before
 
 #### Publishing Process
 
-The Android ecosystem is open, and, as such, it is possible to distribute apps from anywhere (your own site, any store, ...). However, Google Play is the more famous, trusted and popular store and is provided by Google itself.
+The Android ecosystem is open, and, as such, it is possible to distribute apps from anywhere (your own site, any store, ...). However, Google Play is the more famous, trusted and popular store and is provided by Google itself. Amazon Appstore is the default, trusted store on Kindle devices. If a user wants to install third-party apps from a non-trusted source they must explicitly allow this from the security settings on their device.
 
-Whereas other vendors may review and approve apps before they are actually published, such things do not happen on Google Play; this way, a short release time can be expected between the moment when the developer starts the publishing process and the moment when the app is available to users.
+Whereas other vendors may review and approve apps before they are actually published, Google will simply scan for known malware signatures; this way, a short release time can be expected between the moment when the developer starts the publishing process and the moment when the app is available to users.
 
 Publishing an app is quite straightforward, as the main operation is to make the signed .apk file itself downloadable. On Google Play, it starts with creating an account, and then delivering the app through a dedicated interface. Details are available on Android official documentation at https://developer.android.com/distribute/googleplay/start.html.

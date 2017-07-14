@@ -1,24 +1,67 @@
 ## Testing Code Quality
 
+Mobile app developers use a wide variety of programming languages and frameworks. Many classical vulnerabilities, such as SQL injection, buffer overflows and cross-site scripting, can occur in mobile apps if secure programming practices are followed. In the following chapter, we'll give an overview of some common vulnerability classes. OS-specific details and exploit mitigation features will be discussed in later sections.
+
 ### Testing for Injection Flaws
 
 #### Overview
 
 Injection flaws are a class of security vulnerability that occurs when user input is concatenated into backend queries or commands. By injecting meta characters, an attacker can inject malicious code which is then inadvertently interpreted as part of the command or query. For example, by manipulating a SQL query, an attacker could retrieve arbitrary database records or manipulate the content of the backend database.
 
-This vulnerability class is very prevalent in web services, including the endpoints connected to by mobile apps. In the mobile app itself, but exploitable instances are much less common, and the attack surface is smaller. For example, while a mobile app might query a local database, such mobile databases don't store sensitive data that could usefully be extracted through SQL injection (or at least they shouldn't - if they do, it's a sign of broken design). Nevertheless, viable attack scenarios can exist in some scenarios, and proper input validation should generally performed as practice.
+Vulnerability of this class are prevalent in web services, including the endpoints connected to by mobile apps. They also exist in mobile apps, but exploitable instances are less common, and the attack surface is smaller. For example, while a mobile app might query a local SQLite database, such databases usually don't store sensitive data that would make SQL injection a viable attack vector (or at least they shouldn't - if they do, it's a sign of broken design). Nevertheless, exploitable injection vulnerabilities do sometimes occur, and proper input validation should generally performed as best practice.
 
 ##### Common Injection Types
 
 ###### SQL Injection
 
-SQL injection involves "injecting" SQL command characters into the input data, affecting the semantics of the predefined SQL command. A successful SQL injection exploit can read and modify database data or (depending on the database server used) execute administrative commands.
+SQL injection involves "injecting" SQL command characters into input data, affecting the semantics of a predefined SQL command. A successful SQL injection exploit can read and modify database data or (depending on the database server used) execute administrative commands.
 
 Mobile apps on Android and iOS both use SQLite databases as a means of local data storage. SQL injection vulnerabilities occur when user input is concatenated into dynamic SQL statements without prior sanitization.
+
+Assume an Android app that implements local user authentication by storing the user credentials in a local database (this isn't a good idea anyway, but let's ignore that for the sake of this example). Upon login, the app queries the database to search for a record with the user name and password entered by the user:
+
+```java=
+SQLiteDatabase db;
+
+String sql = "SELECT * FROM users WHERE username = '" +  username + "' AND password = '" + password +"'";
+
+Cursor c = db.rawQuery( sql, null );
+
+return c.getCount() != 0;
+```
+
+Let's further assume an attacker enters the following values into the "username" and "password" fields:
+
+
+```
+username = 1' or '1' = '1
+password = 1' or '1' = '1
+```
+
+This results in the following query:
+
+```
+SELECT * FROM users WHERE username='1' OR '1' = '1' AND Password='1' OR '1' = '1' 
+```
+
+Because the condition <code>'1' = '1'</code> always evaluates as true, this query return all records in the database, causing the login function to return "true" even though no valid user account was entered.
+
+One real-world instance of client-side SQL injection was found by Mark Woods in the "Qnotes" and "Qget" Android apps running on QNAP NAS storage appliances. These apps implemented content providers vulnerable to SQL injection, allowing an attacker to retrieve the credentials for the NAS device. A detailed description of this issue can be found on the [Nettitude Blog](http://blog.nettitude.com/uk/qnap-android-dont-provide "Nettitude Blog - "QNAP Android: Don't Over Provide").
 
 ###### XML Injection
 
 In an [XML injection attack](https://www.owasp.org/index.php/Testing_for_XML_Injection_%28OTG-INPVAL-008%29 "XML Injection in the OWASP Testing Guide"), the attacker injects XML meta characters to structurally alter XML content. This can be used to either compromise the logic of an XML-based application or service, or to exploit features of the XML parser processing the content.
+
+A popular variant of variant of this attack is XML Entity Injection (XXE). In this variant, the attacker injects an external entity definition containing an URI into the input XML. During parsing the input, the XML parser expands the attacker-defined entity by accessing the resource specified by the URI. The attacker can use this to gain access to local files, trigger http requests to arbitrary hosts and ports, and cause a denial-of-service condition. The OWASP web testing guide contains the [following example for XXE](https://www.owasp.org/index.php/Testing_for_XML_Injection_(OTG-INPVAL-008)):
+
+```xml
+<?xml version="1.0" encoding="ISO-8859-1"?>
+ <!DOCTYPE foo [  
+  <!ELEMENT foo ANY >
+  <!ENTITY xxe SYSTEM "file:///dev/random" >]><foo>&xxe;</foo>
+```
+
+In this example, the local file `/dev/random` is opened. This file returns an endless stream of bytes, potentially causing a denial-of-service.
 
 In mobile apps, the trend goes towards REST/JSON-based services, so you won't see XML used that often. However, in the rare cases where user-supplied or otherwise untrusted content is used to construct XML queries and passed to local XML parsers, such as NSXMLParser on iOS and on Android, the input should be validated and escaped.
 
@@ -33,17 +76,16 @@ In a manual security review you'll normally use a combination of both techniques
 
 - IPC calls
 - Custom URL schemes
+- QR codes
 - Input files received via Bluetooth, NFC, or other means
 - Pasteboards
 - User interface
 
-Entry points and vulnerable APIs are operating system specific, so we'll describe them in more detail in the OS-specific testing guides.
+You'll find more details on input sources and potentially vulnerable APIs for each mobile OS in the OS-specific testing guides.
 
 #### Remediation
 
-In general, untrusted inputs should always be type-checked and/or validated using a white-list of acceptable values.
-
-Besides that, in many cases vulnerabilities can be prevented by following certain best practices, e.g.:
+Untrusted inputs should always be type-checked and/or validated using a white-list of acceptable values. Besides that, in many cases vulnerabilities can be prevented by following programming best practices, such as:
 
 - Use prepared statements with variable binding (aka parameterized queries) when doing database queries. If prepared statements are used, user-supplied data and SQL code are automatically kept separate;
 - When parsing XML, make sure that the parser is configured to disallow resolution of external entities.
@@ -74,35 +116,45 @@ Memory corruption bugs are a popular mainstay with hackers. In this class of bug
 
 - Dangling pointers: These occur when an object that has an incoming reference is deleted or deallocated, but the the pointer still points to the memory location of the deallocated object. If the program later uses the pointer to call a virtual function, of the (already deallocated) object, it is possible to hijack execution by setting up memory such that the original vtable pointer is overwritten. Alternatively, it is possible to read or write object variables or other memory structures referenced by the dangling pointers.
 
-- Use-after-free: A special case of dangling pointers that point to freed (deallocated) memory. When at some point the same memory is re-allocated, accessing the original pointer will read or write the data contained in the newly allocated memory. When this happens unintentionally, it usually leads to data corruption and undefined behavior, but of course, crafty attackers are able to set up memory in just the right ways leverage to gain control of the instruction pointer.
+- Use-after-free: A special case of dangling pointers that point to freed (deallocated) memory. When memory is freed, all pointers into it become invalid, and the memory manager returns it to the pool of available memory. When at some point the same memory is re-allocated, accessing the original pointer will read or write the data contained in the newly allocated memory. When this happens unintentionally, it usually leads to data corruption and undefined behavior, but crafty attackers can to set up memory in just the right ways leverage to gain control of the instruction pointer.
 
 - Integer overflows: When the result of an arithmetic operation exceeds the maximum size of the integer type chosen by the programmer, the resulting value will "wrap around" the maximum value and end up being much smaller than expected. On the other end of the spectrum, when the result of an arithmetic operation is smaller than the minimum value of the integer type, an integer *underflow* occurs and the result is much larger than expected. Whether a particular integer overflow/underflow bug is exploitable depends on how the integer is used: For example, if the integer represents the length of buffer length being allocated, an overflow can result in a buffer that is too small to hold the data to be copied into it, causing buffer overflow vulnerability.
 
 - Format string vulnerabilities: When unchecked user input is passed to the format string parameter of printf()-family C functions, attackers may inject format tokens such as %c and %n to access memory. Format string bugs are convenient to exploit due to their flexibility: If the program outputs the result of the string formatting operation, the attacker can read and write memory arbitrarily, thus bypassing protection features such as ASLR.
 
-Android apps are for the most part implemented in Java, which is inherently safe from memory corruption issues. However, apps that come with native JNI libraries are susceptible to this kind of bug. On iOS, 
+In most cases, the goal in exploiting memory corruption is modifying redirecting the program flow to a location where the attacker has placed assembled machine instructions referred to as shellcode. On iOS, the data execution prevention feature (as the name implies) prevents memory in data segments from being executed. To bypass this protection, attackers leverage return-oriented programming (ROP), which involves chaining together small, pre-existing code chunks ("gadgets") in the text segment. These gadgets may then execute functionality useful to the attacker, or call <code>mprotect</code> to change memory protection settings on the location of the shellcode.
 
-On iOS, data execution prevention (as the name implies) prevents memory in data segments from being executed. To bypass this protection, attackers leverage return-oriented programming (ROP), which involves chaining together small, pre-existing code chunks ("gadgets") in the text segment. These gadgets may then call <code>mprotect</code> to change memory protection settings on the shellcode.
+Android apps are for the most part implemented in Java which is inherently safe from memory corruption issues. However, apps that come with native JNI libraries are susceptible to this kind of bug. 
 
 #### Static Analysis
 
-Look for uses of the following string functions:
+Static code analysis of low-level code is a complex topic that could easily fill its own book. Automated tools such as [RATS](https://code.google.com/archive/p/rough-auditing-tool-for-security/downloads "RATS - Rough auditing tool for security") combined with a brief manual inspection are sufficient to identify the low-hanging fruits. However, memory corruption conditions can have complex causes. For example, an use-after-free bugs might be caused by an intricate, counter-intuitive race condition that is not immediately apparent. These bugs are discovered either using dynamic analysis, or by testers that take the time to gain a deep understanding of the program.
 
-- strcat
-- strlcat
-- strcpy
-- strlcpy
-- strncat
-- strlcat
-- strncpy
-- strlcpy
-- sprintf
-- snprintf
-- asprintf
-- vsprintf
-- vsnprintf
-- vasprintf
-- gets
+##### Buffer and Integer Overflows
+
+The following code snippet shows a simple example for a buffer overflow vulnerability.
+
+```c
+ void copyData(char *userId) {  
+    char  smallBuffer[10]; // size of 10  
+    strcpy(smallBuffer, userId);
+ }  
+```
+
+- To identify buffer overflows, look for uses of unsafe string functions (strcpy, strcat, str...) and potentially vulnerable programming constructs, such as copying user input into a limited-size buffer. A ['vanilla' buffer overflow might look as follows](https://www.owasp.org/index.php/Reviewing_Code_for_Buffer_Overruns_and_Overflows "OWASP - Reviewing code for buffer overruns and overflows"). The following are examples for unsafe string functions:
+    - strcat
+    - strlcat
+    - strcpy
+    - strncat
+    - strlcat
+    - strncpy
+    - strlcpy
+    - sprintf
+    - snprintf
+    - gets
+
+- Look for instances of copy operations implemented as for- and while loops, and verify that length checks are performed correctly;
+- When integer variables are used for array indexing, buffer length calculations, or any other security-critical operations, ensure that unsigned integer types are used and precondition tests are performed to prevent the possibility of integer wrapping.
 
 #### Dynamic Analysis
 
@@ -163,7 +215,24 @@ At least for reflected XSS, automated black-box testing works quite well. For ex
 
 #### Remediation
 
-Security testers commonly use the infamous JavaScript message box to demonstrate exploitation of XSS.  Inadvertently, developers sometimes assume that blacklisting the alert() command is an acceptable solution.
+Security testers commonly use the infamous JavaScript message box to demonstrate exploitation of XSS. Inadvertently, developers sometimes assume that blacklisting the alert() command is an acceptable solution. This couldn't be farther from the truth! Instead, XSS is best prevented by following general programming best practices.
+
+- Don't put untrusted data into your HTML document unless it is necessary, and when you do, be aware of the context in which the data is rendered. Note that escaping rules can get complicated in nested contexts, such as rendering an URL inside a JavaScript block.
+
+- Escape characters with an appropriate encoding, such as HTML entity encoding, to prevent switching into any execution context, such as script, style, or event handlers. 
+
+Make sure that you escape adequately depending on how the data is rendered in the response. For example, there are six control characters in HTML that need escaping:
+
+| Character  | Escaped      |
+| :-------------: |:-------------:|
+| & | &amp;amp;| 
+| < | &amp;lt; | 
+| > | &amp;gt;| 
+| " | &amp;quot;| 
+| ' | &amp;#x27;| 
+| / | &amp;#x2F;| 
+
+For a comprehensive list of escaping rules and other prevention measures, refer to the [OWASP XSS Prevention Cheat Sheet](https://www.owasp.org/index.php/XSS_(Cross_Site_Scripting)_Prevention_Cheat_Sheet "OWASP XSS Prevention Cheat Sheet").
 
 #### References
 
